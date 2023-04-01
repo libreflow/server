@@ -1,0 +1,127 @@
+import { db } from "../Shared";
+import { UserRegisterValidator, UserType } from "./type";
+import { v4 as uuid } from "uuid";
+import { hashPassword } from "../Password";
+
+
+export class User {
+	/**
+	 * Sucht einen Nutzer in der Datenbank anhand seiner Public/Unique id und gibt ihn zurück.
+	 * @param uid Die unique/public id des gesuchten Benutzers.
+	 * @returns {UserType | null} Die Daten des Nutzers oder null falls dieser nicht gefunden werden kann.
+	 */
+	public static async fromPublicId(uid: string): Promise<UserType | null> {
+		if (!uid || typeof uid !== "string") {
+			return null;
+		}
+
+		const user = await db<UserType>("users").select("*").where("uid", uid).first();
+
+		if (!user) {
+			return null;
+		}
+
+		return user;
+	}
+
+	public static async fromUsername(username: string): Promise<UserType | null> {
+		if (!username || typeof username !== "string") {
+			return null;
+		}
+
+		const user = await db<UserType>("users").select("*").where("username", username).first();
+
+		if (!user) {
+			return null;
+		}
+
+		return user;
+	}
+
+	public static async fromEmail(email: string): Promise<UserType | null> {
+		if (!email || typeof email !== "string") {
+			return null;
+		}
+
+		const user = await db<UserType>("users").select("*").where("email", email).first();
+
+		if (!user) {
+			return null;
+		}
+
+		return user;
+	}
+
+	/**
+	 * Sucht einen Nutzer in der Datenbank anhand seiner Private id und gibt ihn zurück.
+	 * @param uid Die private id des gesuchten Benutzers.
+	 * @returns {UserType | null} Die Daten des Nutzers oder null falls dieser nicht gefunden werden kann.
+	 */
+	public static async fromPrivateId(id: number): Promise<UserType | null> {
+		if (!id || typeof id !== "number") {
+			return null;
+		}
+
+		const user = await db<UserType>("users").select("*").where("id", id).first();
+
+		if (!user) {
+			return null;
+		}
+
+		return user;
+	}
+
+	public static async create(user: UserType): Promise<{uid: string, id: number} | null> {
+		if (!user || UserRegisterValidator.safeParse(user).success == false) {
+			return null;
+		}
+
+		const uid = uuid();
+		const hashedPassword = hashPassword(user.password);
+
+		const result = await db<UserType>("users").insert({
+			username: user.username,
+			email: user.email,
+			password: hashedPassword,
+			uid: uid
+		}, ["id"])
+
+		if (!result) {
+			return null;
+		}
+
+		return {
+			uid,
+			id: result[0].id
+		}
+	}
+
+	public static async modify(user: UserType): Promise<{uid: string} | null> {
+		// Not all things might change in an update, the password might not be given.
+
+		const info = await User.fromPublicId(user.uid);
+
+		if (!info) {
+			return null;
+		}
+
+		let hashedPassword: string = info.password;
+		if (user.password) {
+			hashedPassword = hashPassword(user.password);
+		}
+
+		const result = await db<UserType>("users").update({
+			username: user.username || info.username,
+			email: user.email || info.email,
+			password: hashedPassword
+		}).where("uid", info.uid);
+
+		if (!result) {
+			return null;
+		}
+
+		return {
+			uid: info.uid
+		}
+	}
+}
