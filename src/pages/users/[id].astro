@@ -1,0 +1,33 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import { User } from "../../lib/User";
+
+const { id } = Astro.params;
+
+if (!id) {
+	return Astro.redirect("/");
+}
+
+let user = await User.fromPublicId(id);
+
+if (!user) {
+	return Astro.redirect("/");
+}
+---
+
+<Layout title={user.username + " - Users"}>
+	<main>
+		<h1>{user.username}</h1>
+		<p>ID : {user.uid}</p>
+		<p>Email : {user.email}</p>
+		<h2>Interactions</h2>
+	</main>
+</Layout>
+
+<style is:global>
+	* {
+		box-sizing: border-box;
+		padding: 0;
+		margin: 0;
+	}
+</style>

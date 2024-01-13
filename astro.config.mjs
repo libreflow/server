@@ -17,6 +17,6 @@ export default defineConfig({
     mode: "middleware"
   }),
 	server: {
-		port: 3000
+		port: 3004
 	}
 });
